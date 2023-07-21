@@ -196,7 +196,7 @@ function blog_block_configure($delta = '') {
  */
 function blog_block_save($delta = '', $edit = array()) {
   if ($delta == 'recent') {
-    variable_set('blog_block_count', $edit['blog_block_count']);
+    config_set('blog.settings', 'block_count', $edit['blog_block_count']);
   }
 }
 
