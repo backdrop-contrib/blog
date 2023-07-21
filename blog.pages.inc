@@ -11,7 +11,7 @@
 function blog_page_user($account) {
   global $user;
 
-  drupal_set_title($title = t("@name's blog", array('@name' => format_username($account))), PASS_THROUGH);
+  backdrop_set_title($title = t("@name's blog", array('@name' => user_format_name($account))), PASS_THROUGH);
 
   $build = array();
 
@@ -23,7 +23,7 @@ function blog_page_user($account) {
     ->condition('status', 1)
     ->orderBy('sticky', 'DESC')
     ->orderBy('created', 'DESC')
-    ->limit(variable_get('default_nodes_main', 10))
+    ->limit(config_get('system.core', 'default_nodes_main'))
     ->addTag('node_access')
     ->execute()
     ->fetchCol();
@@ -38,13 +38,13 @@ function blog_page_user($account) {
   }
   else {
     if ($account->uid == $user->uid) {
-      drupal_set_message(t('You have not created any blog entries.'));
+      backdrop_set_message(t('You have not created any blog entries.'));
     }
     else {
-      drupal_set_message(t('!author has not created any blog entries.', array('!author' => theme('username', array('account' => $account)))));
+      backdrop_set_message(t('!author has not created any blog entries.', array('!author' => theme('username', array('account' => $account)))));
     }
   }
-  drupal_add_feed('blog/' . $account->uid . '/feed', t('RSS - !title', array('!title' => $title)));
+  backdrop_add_feed('blog/' . $account->uid . '/feed', t('RSS - !title', array('!title' => $title)));
 
   return $build;
 }
@@ -63,7 +63,7 @@ function blog_page_last() {
     ->condition('status', 1)
     ->orderBy('sticky', 'DESC')
     ->orderBy('created', 'DESC')
-    ->limit(variable_get('default_nodes_main', 10))
+    ->limit(config_get('system.core', 'default_nodes_main'))
     ->addTag('node_access')
     ->execute()
     ->fetchCol();
@@ -77,9 +77,9 @@ function blog_page_last() {
     );
   }
   else {
-    drupal_set_message(t('No blog entries have been created.'));
+    backdrop_set_message(t('No blog entries have been created.'));
   }
-  drupal_add_feed('blog/feed', t('RSS - blogs'));
+  backdrop_add_feed('blog/feed', t('RSS - blogs'));
 
   return $build;
 }
@@ -95,12 +95,12 @@ function blog_feed_user($account) {
     ->condition('uid', $account->uid)
     ->condition('status', 1)
     ->orderBy('created', 'DESC')
-    ->range(0, variable_get('feed_default_items', 10))
+    ->range(0, 10)
     ->addTag('node_access')
     ->execute()
     ->fetchCol();
 
-  $channel['title'] = t("!name's blog", array('!name' => format_username($account)));
+  $channel['title'] = t("!name's blog", array('!name' => user_format_name($account)));
   $channel['link'] = url('blog/' . $account->uid, array('absolute' => TRUE));
 
   node_feed($nids, $channel);
@@ -115,12 +115,12 @@ function blog_feed_last() {
     ->condition('type', 'blog')
     ->condition('status', 1)
     ->orderBy('created', 'DESC')
-    ->range(0, variable_get('feed_default_items', 10))
+    ->range(0, 10)
     ->addTag('node_access')
     ->execute()
     ->fetchCol();
 
-  $channel['title'] = t('!site_name blogs', array('!site_name' => variable_get('site_name', 'Drupal')));
+  $channel['title'] = t('!site_name blogs', array('!site_name' => config_get('system.core', 'site_name')));
   $channel['link'] = url('blog', array('absolute' => TRUE));
 
   node_feed($nids, $channel);

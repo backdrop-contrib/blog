@@ -1,0 +1,5 @@
+[BlogTestCase]
+name = Blog functionality
+description = Create, view, edit, delete, and change blog entries and verify its consistency in the database..
+group = Blog
+file = blog.test

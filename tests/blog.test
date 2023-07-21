@@ -5,18 +5,10 @@
  * Tests for blog.module.
  */
 
-class BlogTestCase extends DrupalWebTestCase {
+class BlogTestCase extends BackdropWebTestCase {
   protected $big_user;
   protected $own_user;
   protected $any_user;
-
-  public static function getInfo() {
-    return array(
-      'name' => 'Blog functionality',
-      'description' => 'Create, view, edit, delete, and change blog entries and verify its consistency in the database.',
-      'group' => 'Blog',
-    );
-  }
 
   /**
    * Enable modules and create users with specific permissions.
@@ -24,9 +16,9 @@ class BlogTestCase extends DrupalWebTestCase {
   function setUp() {
     parent::setUp('blog');
     // Create users.
-    $this->big_user = $this->drupalCreateUser(array('administer blocks'));
-    $this->own_user = $this->drupalCreateUser(array('create blog content', 'edit own blog content', 'delete own blog content'));
-    $this->any_user = $this->drupalCreateUser(array('create blog content', 'edit any blog content', 'delete any blog content', 'access administration pages'));
+    $this->big_user = $this->backdropCreateUser(array('administer blocks'));
+    $this->own_user = $this->backdropCreateUser(array('create blog content', 'edit own blog content', 'delete own blog content'));
+    $this->any_user = $this->backdropCreateUser(array('create blog content', 'edit any blog content', 'delete any blog content', 'access administration pages'));
   }
 
   /**
@@ -36,13 +28,13 @@ class BlogTestCase extends DrupalWebTestCase {
    */
   function testUnprivilegedUser() {
     // Create a blog node for a user with no blog permissions.
-    $this->drupalCreateNode(array('type' => 'blog', 'uid' => $this->big_user->uid));
+    $this->backdropCreateNode(array('type' => 'blog', 'uid' => $this->big_user->uid));
 
-    $this->drupalLogin($this->big_user);
+    $this->backdropLogin($this->big_user);
 
-    $this->drupalGet('blog/' . $this->big_user->uid);
+    $this->backdropGet('blog/' . $this->big_user->uid);
     $this->assertResponse(200);
-    $this->assertTitle(t("@name's blog", array('@name' => format_username($this->big_user))) . ' | Drupal', 'Blog title was displayed');
+    $this->assertTitle(t("@name's blog", array('@name' => user_format_name($this->big_user))) . ' | Backdrop', 'Blog title was displayed');
     $this->assertText(t('You are not allowed to post a new blog entry.'), 'No new entries can be posted without the right permission');
   }
 
@@ -50,12 +42,12 @@ class BlogTestCase extends DrupalWebTestCase {
    * View the blog of a user with no blog entries as another user.
    */
   function testBlogPageNoEntries() {
-    $this->drupalLogin($this->big_user);
+    $this->backdropLogin($this->big_user);
 
-    $this->drupalGet('blog/' . $this->own_user->uid);
+    $this->backdropGet('blog/' . $this->own_user->uid);
     $this->assertResponse(200);
-    $this->assertTitle(t("@name's blog", array('@name' => format_username($this->own_user))) . ' | Drupal', 'Blog title was displayed');
-    $this->assertText(t('@author has not created any blog entries.', array('@author' => format_username($this->own_user))), 'Users blog displayed with no entries');
+    $this->assertTitle(t("@name's blog", array('@name' => user_format_name($this->own_user))) . ' | Backdrop', 'Blog title was displayed');
+    $this->assertText(t('@author has not created any blog entries.', array('@author' => user_format_name($this->own_user))), 'Users blog displayed with no entries');
   }
 
   /**
@@ -63,16 +55,16 @@ class BlogTestCase extends DrupalWebTestCase {
    */
   function testBlog() {
     // Login the admin user.
-    $this->drupalLogin($this->big_user);
+    $this->backdropLogin($this->big_user);
     // Enable the recent blog block.
     $edit = array();
     $edit['blocks[blog_recent][region]'] = 'sidebar_second';
-    $this->drupalPost('admin/structure/block', $edit, t('Save blocks'));
+    $this->backdropPost('admin/structure/block', $edit, t('Save blocks'));
     $this->assertResponse(200);
     // Verify ability to change number of recent blog posts in block.
     $edit = array();
     $edit['blog_block_count'] = 5;
-    $this->drupalPost('admin/structure/block/manage/blog/recent/configure', $edit, t('Save block'));
+    $this->backdropPost('admin/structure/block/manage/blog/recent/configure', $edit, t('Save block'));
     $this->assertEqual(variable_get('blog_block_count', 10), 5, 'Number of recent blog posts changed.');
 
     // Do basic tests for each user.
@@ -80,14 +72,14 @@ class BlogTestCase extends DrupalWebTestCase {
     $this->doBasicTests($this->own_user, FALSE);
 
     // Create another blog node for the any blog user.
-    $node = $this->drupalCreateNode(array('type' => 'blog', 'uid' => $this->any_user->uid));
+    $node = $this->backdropCreateNode(array('type' => 'blog', 'uid' => $this->any_user->uid));
     // Verify the own blog user only has access to the blog view node.
     $this->verifyBlogs($this->any_user, $node, FALSE, 403);
 
     // Create another blog node for the own blog user.
-    $node = $this->drupalCreateNode(array('type' => 'blog', 'uid' => $this->own_user->uid));
+    $node = $this->backdropCreateNode(array('type' => 'blog', 'uid' => $this->own_user->uid));
     // Login the any blog user.
-    $this->drupalLogin($this->any_user);
+    $this->backdropLogin($this->any_user);
     // Verify the any blog user has access to all the blog nodes.
     $this->verifyBlogs($this->own_user, $node, TRUE);
   }
@@ -102,13 +94,13 @@ class BlogTestCase extends DrupalWebTestCase {
    */
   private function doBasicTests($user, $admin) {
     // Login the user.
-    $this->drupalLogin($user);
+    $this->backdropLogin($user);
     // Create blog node.
-    $node = $this->drupalCreateNode(array('type' => 'blog'));
+    $node = $this->backdropCreateNode(array('type' => 'blog'));
     // Verify the user has access to all the blog nodes.
     $this->verifyBlogs($user, $node, $admin);
     // Create one more node to test the blog page with more than one node
-    $this->drupalCreateNode(array('type' => 'blog', 'uid' => $user->uid));
+    $this->backdropCreateNode(array('type' => 'blog', 'uid' => $user->uid));
     // Verify the blog links are displayed.
     $this->verifyBlogLinks($user);
   }
@@ -126,37 +118,27 @@ class BlogTestCase extends DrupalWebTestCase {
    *   HTTP response code.
    */
   private function verifyBlogs($node_user, $node, $admin, $response = 200) {
-    $response2 = ($admin) ? 200 : 403;
-
-    // View blog help node.
-    $this->drupalGet('admin/help/blog');
-    $this->assertResponse($response2);
-    if ($response2 == 200) {
-      $this->assertTitle(t('Blog | Drupal'), 'Blog help node was displayed');
-      $this->assertText(t('Blog'), 'Blog help node was displayed');
-    }
-
     // Verify the blog block was displayed.
-    $this->drupalGet('');
+    $this->backdropGet('');
     $this->assertResponse(200);
     $this->assertText(t('Recent blog posts'), 'Blog block was displayed');
 
     // View blog node.
-    $this->drupalGet('node/' . $node->nid);
+    $this->backdropGet('node/' . $node->nid);
     $this->assertResponse(200);
-    $this->assertTitle($node->title . ' | Drupal', 'Blog node was displayed');
+    $this->assertTitle($node->title . ' | Backdrop', 'Blog node was displayed');
     $breadcrumb = array(
       l(t('Home'), NULL),
       l(t('Blogs'), 'blog'),
-      l(t("!name's blog", array('!name' => format_username($node_user))), 'blog/' . $node_user->uid),
+      l(t("!name's blog", array('!name' => user_format_name($node_user))), 'blog/' . $node_user->uid),
     );
     $this->assertRaw(theme('breadcrumb', array('breadcrumb' => $breadcrumb)), 'Breadcrumbs were displayed');
 
     // View blog edit node.
-    $this->drupalGet('node/' . $node->nid . '/edit');
+    $this->backdropGet('node/' . $node->nid . '/edit');
     $this->assertResponse($response);
     if ($response == 200) {
-      $this->assertTitle('Edit Blog entry ' . $node->title . ' | Drupal', 'Blog edit node was displayed');
+      $this->assertTitle('Edit Blog entry ' . $node->title . ' | Backdrop', 'Blog edit node was displayed');
     }
 
     if ($response == 200) {
@@ -165,11 +147,11 @@ class BlogTestCase extends DrupalWebTestCase {
       $langcode = LANGUAGE_NONE;
       $edit["title"] = 'node/' . $node->nid;
       $edit["body[$langcode][0][value]"] = $this->randomName(256);
-      $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+      $this->backdropPost('node/' . $node->nid . '/edit', $edit, t('Save'));
       $this->assertRaw(t('Blog entry %title has been updated.', array('%title' => $edit["title"])), 'Blog node was edited');
 
       // Delete blog node.
-      $this->drupalPost('node/' . $node->nid . '/delete', array(), t('Delete'));
+      $this->backdropPost('node/' . $node->nid . '/delete', array(), t('Delete'));
       $this->assertResponse($response);
       $this->assertRaw(t('Blog entry %title has been deleted.', array('%title' => $edit["title"])), 'Blog node was deleted');
     }
@@ -183,31 +165,31 @@ class BlogTestCase extends DrupalWebTestCase {
    */
   private function verifyBlogLinks($user) {
     // Confirm blog entries link exists on the user page.
-    $this->drupalGet('user/' . $user->uid);
+    $this->backdropGet('user/' . $user->uid);
     $this->assertResponse(200);
     $this->assertText(t('View recent blog entries'), 'View recent blog entries link was displayed');
 
     // Confirm the recent blog entries link goes to the user's blog page.
     $this->clickLink('View recent blog entries');
-    $this->assertTitle(t("@name's blog | Drupal", array('@name' => format_username($user))), 'View recent blog entries link target was correct');
+    $this->assertTitle(t("@name's blog | Backdrop", array('@name' => user_format_name($user))), 'View recent blog entries link target was correct');
 
     // Confirm a blog page was displayed.
-    $this->drupalGet('blog');
+    $this->backdropGet('blog');
     $this->assertResponse(200);
-    $this->assertTitle('Blogs | Drupal', 'Blog page was displayed');
+    $this->assertTitle('Blogs | Backdrop', 'Blog page was displayed');
     $this->assertText(t('Home'), 'Breadcrumbs were displayed');
     $this->assertLink(t('Create new blog entry'));
 
     // Confirm a blog page was displayed per user.
-    $this->drupalGet('blog/' . $user->uid);
-    $this->assertTitle(t("@name's blog | Drupal", array('@name' => format_username($user))), 'User blog node was displayed');
+    $this->backdropGet('blog/' . $user->uid);
+    $this->assertTitle(t("@name's blog | Backdrop", array('@name' => user_format_name($user))), 'User blog node was displayed');
 
     // Confirm a blog feed was displayed.
-    $this->drupalGet('blog/feed');
-    $this->assertTitle(t('Drupal blogs'), 'Blog feed was displayed');
+    $this->backdropGet('blog/feed');
+    $this->assertTitle(t('Backdrop blogs'), 'Blog feed was displayed');
 
     // Confirm a blog feed was displayed per user.
-    $this->drupalGet('blog/' . $user->uid . '/feed');
-    $this->assertTitle(t("@name's blog", array('@name' => format_username($user))), 'User blog feed was displayed');
+    $this->backdropGet('blog/' . $user->uid . '/feed');
+    $this->assertTitle(t("@name's blog", array('@name' => user_format_name($user))), 'User blog feed was displayed');
   }
 }

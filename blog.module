@@ -19,6 +19,18 @@ function blog_node_info() {
 }
 
 /**
+ * Implements hook_config_info().
+ */
+function blog_config_info() {
+  $prefixes['blog.settings'] = array(
+    'label' => t('Blog settings'),
+    'group' => t('Configuration')
+  );
+
+  return $prefixes;
+}
+
+/**
  * Implements hook_user_view().
  */
 function blog_user_view($account) {
@@ -27,32 +39,9 @@ function blog_user_view($account) {
       '#type' => 'user_profile_item',
       '#title' => t('Blog'),
       // l() escapes the attributes, so we should not escape !username here.
-      '#markup' => l(t('View recent blog entries'), "blog/$account->uid", array('attributes' => array('title' => t("Read !username's latest blog entries.", array('!username' => format_username($account)))))),
+      '#markup' => l(t('View recent blog entries'), "blog/$account->uid", array('attributes' => array('title' => t("Read !username's latest blog entries.", array('!username' => user_format_name($account)))))),
       '#attributes' => array('class' => array('blog')),
     );
-  }
-}
-
-/**
- * Implements hook_help().
- */
-function blog_help($path, $arg) {
-  switch ($path) {
-    case 'admin/help#blog':
-      $output = '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t("The Blog module allows registered users to maintain an online journal, or <em>blog</em>. Blogs are made up of individual <em>blog entries</em>. By default, the blog entries are displayed by creation time in descending order, with comments enabled, and are promoted to the site's front page. For more information, see the online handbook entry for <a href='@blog'>Blog module</a>.", array('@blog' => 'http://drupal.org/documentation/modules/blog/')) . '</p>';
-      $output .= '<h3>' . t('Uses') . '</h3>';
-      $output .= '<dl>';
-      $output .= '<dt>' . t('Single-user blogs') . '</dt>';
-      $output .= '<dd>' . t("Each user's blog entries are automatically displayed with a link to the user's main blog page. You can create as many single-user blogs as you have site users with permission to create blog content.") . '</dd>';
-      $output .= '<dt>' . t('Multi-user blogs') . '</dt>';
-      $output .= '<dd>' . t("Blog entries from each single-user blog are also aggregated into one central multi-user blog, which displays the blog content of all users in a single listing.") . '</dd>';
-      $output .= '<dt>' . t('Navigation') . '</dt>';
-      $output .= '<dd>' . t("There is an optional <em>Blogs</em> menu item added to the Navigation menu, which displays all blogs available on your site, and a <em>My blog</em> item displaying the current user's blog entries.") . '</dd>';
-      $output .= '<dt>' . t('Blocks') . '</dt>';
-      $output .= '<dd>' . t('The Blog module also creates a default <em>Recent blog posts</em> block that may be enabled at the <a href="@blocks">blocks administration page</a>.', array('@blocks' => url('admin/structure/block'))) . '</dd>';
-      $output .= '</dl>';
-      return $output;
   }
 }
 
@@ -69,7 +58,7 @@ function blog_form($node, $form_state) {
 function blog_view($node, $view_mode) {
   if ($view_mode == 'full' && node_is_page($node)) {
     // Breadcrumb navigation.  l() escapes title, so we should not escape !name.
-    drupal_set_breadcrumb(array(l(t('Home'), NULL), l(t('Blogs'), 'blog'), l(t("!name's blog", array('!name' => format_username($node))), 'blog/' . $node->uid)));
+    backdrop_set_breadcrumb(array(l(t('Home'), NULL), l(t('Blogs'), 'blog'), l(t("!name's blog", array('!name' => user_format_name($node))), 'blog/' . $node->uid)));
   }
   return $node;
 }
@@ -82,9 +71,9 @@ function blog_node_view($node, $view_mode) {
     if ($node->type == 'blog' && (arg(0) != 'blog' || arg(1) != $node->uid)) {
       // This goes to l(), which escapes !username in both title and attributes.
       $links['blog_usernames_blog'] = array(
-        'title' => t("!username's blog", array('!username' => format_username($node))),
+        'title' => t("!username's blog", array('!username' => user_format_name($node))),
         'href' => "blog/$node->uid",
-        'attributes' => array('title' => t("Read !username's latest blog entries.", array('!username' => format_username($node)))),
+        'attributes' => array('title' => t("Read !username's latest blog entries.", array('!username' => user_format_name($node)))),
       );
       $node->content['links']['blog'] = array(
         '#theme' => 'links__node__blog',
@@ -208,8 +197,8 @@ function blog_block_configure($delta = '') {
     $form['blog_block_count'] = array(
       '#type' => 'select',
       '#title' => t('Number of recent blog posts to display'),
-      '#default_value' => variable_get('blog_block_count', 10),
-      '#options' => drupal_map_assoc(array(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 25, 30)),
+      '#default_value' => config_get('blog.settings', 'block_count'),
+      '#options' => backdrop_map_assoc(array(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 25, 30)),
     );
     return $form;
   }
@@ -238,7 +227,7 @@ function blog_block_view($delta = '') {
       ->condition('type', 'blog')
       ->condition('status', 1)
       ->orderBy('created', 'DESC')
-      ->range(0, variable_get('blog_block_count', 10))
+      ->range(0, config_get('blog.settings', 'block_count'))
       ->addTag('node_access')
       ->execute();
 

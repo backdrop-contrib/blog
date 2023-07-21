@@ -1,6 +1,7 @@
 name = Blog
 description = Enables multi-user blogs.
-package = Core
-version = VERSION
-core = 7.x
-files[] = blog.test
+package = Content
+backdrop = 1.x
+type = module
+tags[] = content
+tags[] = blog
